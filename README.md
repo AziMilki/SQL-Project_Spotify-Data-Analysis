@@ -70,43 +70,157 @@ In advanced stages, the focus shifts to improving query performance. Some optimi
 
 ### Easy Level
 1. Retrieve the names of all tracks that have more than 1 billion streams.
+```sql
+SELECT *
+FROM Spotify
+WHERE Stream > 1000000000
+```
 2. List all albums along with their respective artists.
+```sql
+SELECT
+	DISTINCT(Album),
+	Artist
+FROM Spotify
+ORDER BY 1
+```
 3. Get the total number of comments for tracks where `licensed = TRUE`.
+```sql
+SELECT
+	SUM(Comments) AS total_comments
+FROM Spotify
+WHERE Licensed LIKE 'TRUE'
+```
 4. Find all tracks that belong to the album type `single`.
+```sql
+SELECT *
+FROM Spotify
+WHERE Album_type = 'single'
+```
 5. Count the total number of tracks by each artist.
+```sql
+SELECT
+	Artist,
+	COUNT(Track)
+FROM Spotify
+GROUP BY Artist
+ORDER BY 2
+```
 
 ### Medium Level
 1. Calculate the average danceability of tracks in each album.
+```sql
+SELECT
+	Album,
+	AVG(Danceability) AS avg_danceability
+FROM Spotify
+GROUP BY Album
+ORDER BY 2 DESC
+```
 2. Find the top 5 tracks with the highest energy values.
+```sql
+SELECT TOP (5)
+ Track,
+ MAX(Energy)
+FROM Spotify
+GROUP BY Track
+ORDER BY 2 DESC
+```
 3. List all tracks along with their views and likes where `official_video = TRUE`.
+```sql
+SELECT
+	Track,
+	SUM(Views) AS total_views,
+	SUM(Likes) AS total_likes
+FROM Spotify
+WHERE official_video = 'TRUE'
+GROUP BY Track
+ORDER BY 2 DESC
+```
 4. For each album, calculate the total views of all associated tracks.
+```sql
+SELECT 
+	Album,
+	Track,
+	SUM(Views) AS total_views
+FROM Spotify
+GROUP BY Album, Track
+ORDER BY 3 DESC
+```
 5. Retrieve the track names that have been streamed on Spotify more than YouTube.
+```sql
+SELECT 
+	Track,
+	total_youtube_stream,
+	total_spotify_stream
+FROM
+(
+SELECT
+	Track,
+	SUM(IIF(most_playedon = 'Youtube',Stream, '0')) AS total_youtube_stream,
+	SUM(IIF(most_playedon = 'Spotify',Stream, '0')) AS total_spotify_stream
+FROM Spotify
+GROUP BY Track) t1
+WHERE total_spotify_stream > total_youtube_stream
+		AND total_youtube_stream <> 0
+```
 
 ### Advanced Level
 1. Find the top 3 most-viewed tracks for each artist using window functions.
+```sql
+SELECT *
+FROM
+(
+SELECT
+	Artist,
+	Track,
+	SUM(Views) AS total_view,
+	DENSE_RANK() OVER (PARTITION BY Artist ORDER BY SUM(Views) DESC) AS rank
+FROM Spotify
+GROUP BY Artist, Track
+) t1
+WHERE rank <= 3
+```
 2. Write a query to find tracks where the liveness score is above the average.
+```sql
+SELECT *
+FROM Spotify
+WHERE Liveness > (SELECT
+					AVG(Liveness)
+				FROM Spotify)
+```
 3. **Use a `WITH` clause to calculate the difference between the highest and lowest energy values for tracks in each album.**
 ```sql
-WITH cte
+WITH energy
 AS
-(SELECT 
-	album,
-	MAX(energy) as highest_energy,
-	MIN(energy) as lowest_energery
-FROM spotify
-GROUP BY 1
-)
-SELECT 
-	album,
-	highest_energy - lowest_energery as energy_diff
-FROM cte
+(
+SELECT
+	Album,
+	MAX(Energy) AS max_energy,
+	MIN(Energy) AS min_energy
+FROM Spotify
+GROUP BY Album)
+
+SELECT
+	Album,
+	max_energy - min_energy AS energy_difference
+FROM energy
 ORDER BY 2 DESC
 ```
    
 5. Find tracks where the energy-to-liveness ratio is greater than 1.2.
+```sql
+SELECT *
+FROM Spotify
+WHERE EnergyLiveness > 1.2
+```
 6. Calculate the cumulative sum of likes for tracks ordered by the number of views, using window functions.
-
-
+```sql
+SELECT
+	LTRIM(RTRIM(Track)) AS track,
+	Likes,
+	SUM(Likes) OVER(PARTITION BY LTRIM(RTRIM(Track)) ORDER BY Views) AS cumm_likes
+FROM Spotify
+```
 Here’s an updated section for your **Spotify Advanced SQL Project and Query Optimization** README, focusing on the query optimization task you performed. You can include the specific screenshots and graphs as described.
 
 ---
@@ -145,20 +259,6 @@ To improve query performance, we carried out the following optimization process:
       ![Performance Graph](https://github.com/najirh/najirh-Spotify-Data-Analysis-using-SQL/blob/main/spotify_graphical%20view%201.png)
 
 This optimization shows how indexing can drastically reduce query time, improving the overall performance of our database operations in the Spotify project.
----
-
-## Technology Stack
-- **Database**: PostgreSQL
-- **SQL Queries**: DDL, DML, Aggregations, Joins, Subqueries, Window Functions
-- **Tools**: pgAdmin 4 (or any SQL editor), PostgreSQL (via Homebrew, Docker, or direct installation)
-
-## How to Run the Project
-1. Install PostgreSQL and pgAdmin (if not already installed).
-2. Set up the database schema and tables using the provided normalization structure.
-3. Insert the sample data into the respective tables.
-4. Execute SQL queries to solve the listed problems.
-5. Explore query optimization techniques for large datasets.
-
 ---
 
 ## Next Steps
